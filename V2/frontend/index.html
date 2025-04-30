@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sumaransy 서비스페이지</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="#">홈</a>
+      <a href="#">모니터링</a>
+    </nav>
+  </header>
+  <div class="container">
+    <div class="card">
+      <h3>차량 정보</h3>
+      <p>차대번호: <strong>0123456781423423</strong></p>
+      <p>차종: <strong>테슬라 X</strong></p>
+      <p>충전기 상태: <span style="color: green">연결됨</span></p>
+    </div>
+
+    <div class="card button-card">
+      <h3>차량 제어</h3>
+      <div class="buttons">
+        <button class="start-btn">▶ 충전 시작</button>
+        <button class="stop-btn">■ 충전 중단</button>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h3>배터리 상태</h3>
+      <div style="font-size: 36px; text-align: center; margin: 20px 0;">70%</div>
+      <canvas id="batteryChart"></canvas>
+      <!--circle chart of battery soc-->
+      <h3>배터리 수명</h3>
+      <div style="font-size: 36px; text-align: center; margin: 20px 0;">98%</div>
+      <!--bar chart of battery life-->
+      <h3>현재 외부 온도</h3>
+      <div style="font-size: 36px; text-align: center; margin: 20px 0;">25°C</div>
+      <!--chart of air temp-->
+    </div>
+
+    <div class="card">
+      <h3>배터리 온도</h3>
+      <div style="font-size: 36px; text-align: center; margin: 20px 0;">28°C</div>
+      <canvas id="battempChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>현재 차량 온도</h3>
+      <div style="font-size: 36px; text-align: center; margin: 20px 0;">25°C</div>"
+      <canvas id="cartempChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>배터리 전압</h3>
+      <canvas id="voltageChart"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
