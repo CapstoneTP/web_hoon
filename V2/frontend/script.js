@@ -1,8 +1,14 @@
-import { startWebSocket } from "./ws-handler.js";
+import { startWebSocket, sendStartChargeCommand, sendStopChargeCommand } from "./ws-handler.js";
 
+let socChart = null;
+let tempChart = null;
+let voltageChart = null;
+let chargeTimer = null;
 
 const drawLineChart = (id, labels, data, label) => {
-    new Chart(document.getElementById(id), {
+  if (voltageChart) voltageChart.destroy();
+
+    voltageChart = new Chart(document.getElementById(id), {
       type: 'line',
       data: {
         labels: labels,
@@ -16,6 +22,7 @@ const drawLineChart = (id, labels, data, label) => {
         }]
       },
       options: {
+        animation: false,
         scales: {
           y: {
             beginAtZero: true
@@ -38,13 +45,16 @@ const doubleLineChart = (id, labels, dataSets, labelsForData) => {
     tension: 0.3
   }));
 
-  new Chart(document.getElementById(id), {
+  if (tempChart) tempChart.destroy();
+
+  tempChart = new Chart(document.getElementById(id), {
     type: 'line',
     data: {
       labels: labels,
       datasets: datasets
     },
     options: {
+      animation: false,
       responsive: true,
       scales: {
         y: {
@@ -73,7 +83,9 @@ const doubleLineChart = (id, labels, dataSets, labelsForData) => {
       }
     };
   
-    new Chart(document.getElementById(id), {
+    if (socChart) socChart.destroy();
+
+    socChart = new Chart(document.getElementById(id), {
       type: 'doughnut',
       data: {
         datasets: [{
@@ -106,44 +118,97 @@ function getDoughnutColor(charging) {
 
 // Real-time updates via WebSocket
 startWebSocket(
-  (soc, soh) => {
+  (soc, soh, data) => {
     const socElem = document.getElementById("soc-percent");
     const sohElem = document.getElementById("sohChartBar");
     if (socElem) socElem.textContent = `${soc}%`;
     if (sohElem) sohElem.value = soh;
     drawDoughnutChart("socChartDoughnut", soc, getDoughnutColor(charging));
+
+    // VIN_car_info: 차대번호
+    if (data && data.id == 1569) {
+      const vinBytes = data.data;
+      const vin = vinBytes.map(b => String.fromCharCode(b)).join('').replace(/\0/g, '');
+      const vinElem = document.querySelector("p strong");
+      if (vinElem) vinElem.textContent = vin;
+    }
+
+    // BMS_Company_Info: 차종 (예시로 회사 이름을 차종으로 사용)
+    if (data && data.id == 1568) {
+      const carnameBytes = data.data;
+      const carname = carnameBytes.map(b => String.fromCharCode(b)).join('').replace(/\0/g, '');
+      const carElem = document.querySelectorAll("p strong")[1];
+      if (carElem) carElem.textContent = carname;
+    }
   },
-  (batteryTemp, externalTemp) => {
+  (batteryTempBuffer, externalTempBuffer, labels) => {
     doubleLineChart(
       "tempChart",
-      ["지금"],
-      [[batteryTemp], [externalTemp]],
+      labels,
+      [batteryTempBuffer, externalTempBuffer],
       ["배터리 온도", "외부 온도"]
     );
   },
-  (voltage) => {
+  (voltageBuffer, labels) => {
     drawLineChart(
       "voltageChart",
-      ["지금"],
-      [voltage],
+      labels,
+      voltageBuffer,
       "전압"
     );
   }
 );
 
+const modal = document.getElementById("startChargeModal");
+const confirmBtn = document.getElementById("confirmStart");
+const cancelBtn = document.getElementById("cancelStart");
 
+document.querySelector(".start-btn").addEventListener("click", () => {
+    modal.style.display = "block";
+});
 
+confirmBtn.addEventListener("click", () => {
+  modal.style.display = "none";
+  const durationInput = document.getElementById("chargeDuration");
+  let seconds = parseInt(durationInput.value) || 60;
+  if (isNaN(seconds) || seconds < 0 || seconds > 100000) {
+    seconds = 20;
+  }
+  sendStartChargeCommand();
+  let remaining = seconds;
+  const timeElem = document.getElementById("remaining-time");
+  timeElem.textContent = `(${remaining}s 남음)`;
+  if (chargeTimer) clearInterval(chargeTimer);
+  chargeTimer = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(chargeTimer);
+      timeElem.textContent = `(0s 남음)`;
+      sendStopChargeCommand(); // Automatically stop charging
+    } else {
+      timeElem.textContent = `(${remaining}s 남음)`;
+    }
+  }, 1000);
+});
 
+cancelBtn.addEventListener("click", () => {
+  modal.style.display = "none";
+});
 
+document.querySelector(".stop-btn").addEventListener("click", () => {
+  if (chargeTimer) clearInterval(chargeTimer);
+  sendStopChargeCommand();
+  const timeElem = document.getElementById("remaining-time");
+  if (timeElem) timeElem.textContent = "(충전시간 설정안됨)";
+});
 
-  // drawDoughnutChart('socChartDoughnut', 60, getDoughnutColor(charging));
-  // doubleLineChart(
-  //   'tempChart',
-  //   ['00:00', '00:10', '00:20'],
-  //   [
-  //     [27, 25, 22],
-  //     [25, 26, 26.5]
-  //   ],
-  //   ['배터리 온도', '외부 온도']
-  // );
-  // drawLineChart('voltageChart', ['00','04','08','12','16','20','24'], [380, 382, 385, 384, 383, 382, 384], '전압');
+document.addEventListener("DOMContentLoaded", () => {
+  const closeBtn = document.getElementById("closeEmergencyModal");
+  const emergencyModal = document.getElementById("emergencyStopModal");
+  if (closeBtn && emergencyModal) {
+    closeBtn.addEventListener("click", () => {
+      if (chargeTimer) clearInterval(chargeTimer);
+      emergencyModal.style.display = "none";
+    });
+  }
+});

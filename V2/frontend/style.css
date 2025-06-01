@@ -91,3 +91,26 @@ body {
       grid-template-columns: 1fr; /* Stack columns vertically */
     }
   }
+
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.4);
+}
+.modal-content {
+  background-color: white;
+  margin: 20% auto;
+  padding: 20px;
+  width: 300px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.modal-content .start-btn,
+.modal-content .stop-btn {
+  margin: 10px;
+}
